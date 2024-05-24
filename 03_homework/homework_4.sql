@@ -18,6 +18,14 @@ Edit the appropriate columns -- you're making two edits -- and the NULL rows wil
 All the other rows will remain the same.) */
 
 
+SELECT
+  product_name || ', ' ||
+  COALESCE(product_size, '') || ' (' ||
+  COALESCE(product_qty_type, 'unit') || ')'
+FROM
+  product;
+
+
 
 
 --Windowed Functions
@@ -31,9 +39,34 @@ each new market date for each customer, or select only the unique market dates p
 HINT: One of these approaches uses ROW_NUMBER() and one uses DENSE_RANK(). */
 
 
+SELECT
+    customer_id,
+    market_date,
+    ROW_NUMBER() OVER (PARTITION BY customer_id ORDER BY market_date) AS visit_number
+FROM
+    customer_purchases;
+
+
 /* 2. Reverse the numbering of the query from a part so each customer’s most recent visit is labeled 1, 
 then write another query that uses this one as a subquery (or temp table) and filters the results to 
 only the customer’s most recent visit. */
+
+
+SELECT
+    customer_id,
+    market_date
+FROM
+    (
+        SELECT
+            customer_id,
+            market_date,
+            ROW_NUMBER() OVER (PARTITION BY customer_id ORDER BY market_date DESC) AS visit_number
+        FROM
+            customer_purchases
+    ) AS Reversequery
+WHERE
+    visit_number = 1;
+
 
 
 /* 3. Using a COUNT() window function, include a value along with each row of the 
