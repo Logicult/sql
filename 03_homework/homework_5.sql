@@ -11,9 +11,26 @@ Remove any trailing or leading whitespaces. Don't just use a case statement for 
 Hint: you might need to use INSTR(product_name,'-') to find the hyphens. INSTR will help split the column. */
 
 
+SELECT product_name,
+    CASE
+        WHEN INSTR(product_name, '-') > 0 THEN TRIM(SUBSTR(product_name, INSTR(product_name, '-') + 1))
+        ELSE NULL
+    END AS Type_of_product
+FROM product;
+
+
 
 /* 2. Filter the query to show any product_size value that contain a number with REGEXP. */
 
+
+SELECT product_name,
+    CASE
+        WHEN INSTR(product_name, '-') > 0 THEN TRIM(SUBSTR(product_name, INSTR(product_name, '-') + 1))
+        ELSE NULL
+    END AS Type_of_product,
+    product_size
+FROM product
+WHERE product_size REGEXP '[0-9]';
 
 
 -- UNION
@@ -25,6 +42,36 @@ HINT: There are a possibly a few ways to do this query, but if you're struggling
 "best day" and "worst day"; 
 3) Query the second temp table twice, once for the best day, once for the worst day, 
 with a UNION binding them. */
+
+
+
+WITH Total_sale_per_day AS (
+    SELECT market_date,
+        SUM(quantity * cost_to_customer_per_qty) AS sales_per_date
+    FROM customer_purchases
+    GROUP BY market_date
+),
+rank_sales_per_date AS (
+    SELECT market_date,
+	    sales_per_date,
+        RANK() OVER (ORDER BY sales_per_date DESC) AS rank_high,
+        RANK() OVER (ORDER BY sales_per_date ASC) AS rank_low
+    FROM 
+        total_sale_per_day
+)
+SELECT market_date,
+       sales_per_date,
+    'Highest Sales' AS sales_type
+FROM rank_sales_per_date
+WHERE rank_high = 1
+
+UNION
+
+SELECT market_date,
+       sales_per_date,
+    'Lowest Sales' AS sales_type
+FROM rank_sales_per_date
+WHERE rank_low = 1;
 
 
 
@@ -40,6 +87,23 @@ How many customers are there (y).
 Before your final group by you should have the product of those two queries (x*y).  */
 
 
+SELECT
+    a.vendor_name,
+    b.product_name,
+    c.original_price,
+    (SELECT COUNT(*) FROM customer) * 5 * c.original_price AS total_sale
+FROM
+    vendor_inventory c
+JOIN
+    vendor a ON c.vendor_id = a.vendor_id
+JOIN
+    product b ON c.product_id = b.product_id
+GROUP BY
+    a.vendor_name,
+    b.product_name,
+    c.original_price;
+
+
 
 -- INSERT
 /*1.  Create a new table "product_units". 
@@ -48,10 +112,27 @@ It should use all of the columns from the product table, as well as a new column
 Name the timestamp column `snapshot_timestamp`. */
 
 
+CREATE TABLE product_units AS
+SELECT
+    product_id,
+    product_name,
+    product_size,
+    product_category_id,
+    product_qty_type,
+    CURRENT_TIMESTAMP AS snapshot_timestamp
+FROM
+    product
+WHERE
+    product_qty_type = 'unit';
+
 
 /*2. Using `INSERT`, add a new row to the product_units table (with an updated timestamp). 
 This can be any product you desire (e.g. add another record for Apple Pie). */
 
+
+INSERT INTO product_units (product_id, product_name, product_size, product_category_id, product_qty_type, snapshot_timestamp)
+VALUES
+    (007, 'Eggs', 'Dozen', 2, 'unit', CURRENT_TIMESTAMP);
 
 
 -- DELETE
@@ -59,6 +140,15 @@ This can be any product you desire (e.g. add another record for Apple Pie). */
 
 HINT: If you don't specify a WHERE clause, you are going to have a bad time.*/
 
+
+DELETE FROM product_units
+WHERE product_id = (
+    SELECT product_id
+    FROM product_units
+    WHERE product_name = 'Eggs'
+    ORDER BY snapshot_timestamp
+    LIMIT 1
+);
 
 
 -- UPDATE
@@ -79,3 +169,29 @@ Finally, make sure you have a WHERE statement to update the right row,
 When you have all of these components, you can run the update statement. */
 
 
+-- Add current_quantity column
+ALTER TABLE product_units
+ADD current_quantity INT;
+
+-- Update current_quantity column
+UPDATE product_units
+SET current_quantity = (
+    SELECT COALESCE(xy.quantity, 0)
+    FROM vendor_inventory xy
+    INNER JOIN (
+        SELECT product_id, MAX(market_date) AS latest_date
+        FROM vendor_inventory
+        GROUP BY product_id
+    ) subquery ON xy.product_id = subquery.product_id AND xy.market_date = subquery.latest_date
+    WHERE xy.product_id = product_units.product_id
+)
+WHERE EXISTS (
+    SELECT 1
+    FROM vendor_inventory xy
+    INNER JOIN (
+        SELECT product_id, MAX(market_date) AS latest_date
+        FROM vendor_inventory
+        GROUP BY product_id
+    ) subquery ON xy.product_id = subquery.product_id AND xy.market_date = subquery.latest_date
+    WHERE xy.product_id = product_units.product_id
+);
