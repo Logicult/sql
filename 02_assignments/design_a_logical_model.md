@@ -17,6 +17,9 @@ Bonus: Are there privacy implications to this, why or why not?
 ```
 Your answer...
 ```
+Yes, there will be privacy concerns as the TYPE 2 SCD retains old addresses and in case of a breach in the basic database management software of the small bookstore, a larger amount of data can be lost and misused. In real life, 
+there may not be any regular use of a customer's old address hence no real benefit in retaining old address records.
+
 
 ## Question 4
 Review the AdventureWorks Schema [here](https://i.stack.imgur.com/LMu4W.gif)
@@ -25,6 +28,14 @@ Highlight at least two differences between it and your ERD. Would you change any
 ```
 Your answer...
 ```
+From a small bookstore's perspective, the proposed ERD is most utilitarian and functional. I would not change anything when companring it to the shared schema. 
+
+The AdventureWorks schema is different.
+- It is probably for a large corporate and hence focusses on high-level business departments like HR, Purchasing etc. In a small bookstore, such functions will not be present and the relatioships will be between basic heads like 
+customer purchase dates and item numbers.
+
+- The schema shared doesnot show the relationships between various tables only the general links.
+
 
 # Criteria
 
